@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Trash2, Copy, ChevronDown, ChevronUp, CookingPot, Check } from "lucide-react";
+import { Trash2, Copy, ChevronDown, ChevronUp, CookingPot, Check, Download } from "lucide-react";
 import { getCreations, removeCreation } from "@/lib/storage";
 import { CHEFS } from "@/lib/chefs";
 import { DISH_TYPES } from "@/lib/dishes";
@@ -183,23 +183,40 @@ export default function CreationsPage() {
 
                   {/* Actions bar */}
                   <div className="px-5 py-3 bg-warm-50 border-t border-warm-100 flex items-center justify-between">
-                    {/* Copy button */}
-                    <button
-                      onClick={() => handleCopy(creation.id, creation.content)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-warm-600 hover:text-warm-800 hover:bg-warm-100"
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check className="w-4 h-4 text-green-600" />
-                          <span className="text-green-600">已复制</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          <span>复制内容</span>
-                        </>
-                      )}
-                    </button>
+                    {/* Copy & Download buttons */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleCopy(creation.id, creation.content)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-warm-600 hover:text-warm-800 hover:bg-warm-100"
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="w-4 h-4 text-green-600" />
+                            <span className="text-green-600">已复制</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>复制</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([creation.content], { type: "text/plain;charset=utf-8" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `${creation.dishName}.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-warm-600 hover:text-warm-800 hover:bg-warm-100"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>下载</span>
+                      </button>
+                    </div>
 
                     {/* Delete button */}
                     {isDeleting ? (
