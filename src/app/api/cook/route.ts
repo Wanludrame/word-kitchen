@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     // Use streaming with Azure OpenAI
     const stream = await client.chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT || "",
-      max_tokens: 8192,
+      max_completion_tokens: 8192,
       stream: true,
       messages: [
         { role: "system", content: system },
