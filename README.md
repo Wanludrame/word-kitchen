@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 文字厨房 🍳
 
-## Getting Started
+你读过的每一段文字都不会浪费，它们会变成你笔下的味道。
 
-First, run the development server:
+**文字厨房**是一个 AI 驱动的创意写作工具，用厨房的隐喻串联整个创作流程：
+
+- **食材** — 存入你喜欢的文字片段
+- **菜名** — 给出一个主题或方向
+- **菜式** — 选择体裁（诗歌、小说、散文、小红书……）
+- **厨师** — 挑一位风格独特的电子作家（电子大刘、电子古龙、电子鲁迅……）
+- **调味** — 微调篇幅、口味、火候等参数
+- **上菜** — AI 融合食材风格，端出佳作
+
+## 技术栈
+
+- Next.js 15 / React 19
+- Tailwind CSS
+- Claude API（流式输出）
+- Framer Motion
+
+## 本地开发
 
 ```bash
+npm install
+cp .env.local.example .env.local
+# 编辑 .env.local，填入你的 ANTHROPIC_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+访问 http://localhost:3000

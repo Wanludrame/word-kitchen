@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-warm-50: #fdf8f0;
+  --color-warm-100: #f5e6d3;
+  --color-warm-200: #e8cba7;
+  --color-warm-300: #d4a574;
+  --color-warm-400: #c4843c;
+  --color-warm-500: #a86a2a;
+  --color-warm-600: #8b5220;
+  --color-warm-700: #6e3d18;
+  --color-warm-800: #512b12;
+  --color-warm-900: #3a1e0d;
+  --color-cream: #faf6f0;
+  --color-toast: #c4843c;
+  --color-espresso: #3a1e0d;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #faf6f0;
+  --foreground: #3a1e0d;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4a574; border-radius: 3px; }
+
+/* Prose styles for generated content */
+.prose h1, .prose h2, .prose h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
+.prose p { line-height: 1.8; margin-bottom: 1em; }
+.prose blockquote { border-left: 3px solid #c4843c; padding-left: 1em; color: #6e3d18; font-style: italic; }
