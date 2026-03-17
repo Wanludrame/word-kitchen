@@ -115,8 +115,8 @@
 ```
 ┌─────────────────────────────────────────────┐
 │                  前端 (Web)                   │
-│      Next.js 15 + React 19 + TailwindCSS    │
-│      Framer Motion + shadcn/ui              │
+│      Next.js 16 + React 19 + TailwindCSS    │
+│      Framer Motion + Lucide React           │
 ├─────────────────────────────────────────────┤
 │              API Routes                      │
 │  /api/cook          → 流式创作（SSE）         │
@@ -163,8 +163,8 @@
 
 | 层级 | 技术 | 理由 |
 |------|------|------|
-| 前端 | Next.js 15 + React 19 | SSR + 流式渲染，中文SEO友好 |
-| 样式 | TailwindCSS + shadcn/ui | 快速开发，组件丰富 |
+| 前端 | Next.js 16 + React 19 | SSR + 流式渲染，中文SEO友好 |
+| 样式 | TailwindCSS + Lucide React | 快速开发，图标丰富 |
 | 动效 | Framer Motion | 厨房主题动效（翻炒、上菜等） |
 | AI | Azure OpenAI (gpt-5.3-chat) | 中文理解力强，风格模仿出色 |
 | 数据库 | PostgreSQL + Prisma（Phase 1+） | 关系数据 + ORM |
@@ -323,7 +323,7 @@ model Cookbook {
 - [x] 首页展示（四步曲 + 菜单 + 大厨阵容）
 - [x] Vercel 部署上线
 
-**技术**: Next.js 15 + React 19 + Azure OpenAI + localStorage
+**技术**: Next.js 16 + React 19 + Azure OpenAI + localStorage
 
 ### Phase 1 — 厨房开张
 **目标**: 完整的单人创作体验

@@ -14,7 +14,7 @@
 
 ## 技术栈
 
-- Next.js 15 / React 19
+- Next.js 16 / React 19
 - Tailwind CSS
 - Azure OpenAI（流式输出）
 - Framer Motion
