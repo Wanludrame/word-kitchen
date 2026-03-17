@@ -15,12 +15,12 @@ export const DISH_TYPE_CONFIGS: Record<DishType, DishTypeConfig> = {
     perspective: null,
     era: { available: ['auto', 'ancient', 'modern', 'contemporary', 'future', 'any'], default: 'auto' },
   },
-  'flash-fiction': {
-    portion: { available: ['auto', 'tiny', 'small'], default: 'small' },
+  standup: {
+    portion: { available: ['auto', 'tiny', 'small', 'medium'], default: 'small' },
     heat: { available: ['auto', 'bold', 'balanced', 'gentle'], default: 'auto' },
     flavor: { available: ['auto', 'sweet', 'salty', 'spicy', 'sour', 'bitter'], default: 'auto' },
-    perspective: { available: ['auto', 'first', 'third', 'omniscient', 'second'], default: 'auto' },
-    era: { available: ['auto', 'ancient', 'modern', 'contemporary', 'future', 'any'], default: 'auto' },
+    perspective: null,
+    era: null,
   },
   xiaohongshu: {
     portion: { available: ['auto', 'tiny', 'small', 'medium'], default: 'small' },

@@ -34,7 +34,7 @@ export interface DishTypeConfig {
   era: SeasoningParamConfig<EraValue> | null;
 }
 
-export type DishType = 'poetry' | 'novel' | 'xiaohongshu' | 'blog' | 'podcast' | 'essay' | 'review' | 'flash-fiction' | 'lyrics';
+export type DishType = 'poetry' | 'novel' | 'xiaohongshu' | 'blog' | 'podcast' | 'essay' | 'review' | 'standup' | 'lyrics';
 
 export interface DishTypeInfo {
   id: DishType;
@@ -59,6 +59,7 @@ export interface Creation {
   dishName: string;
   dishType: DishType;
   chefId: string;
+  craftMode?: 'master' | 'custom';
   seasoning: Seasoning;
   content: string;
   ingredientIds: string[];

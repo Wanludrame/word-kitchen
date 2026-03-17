@@ -8,6 +8,6 @@ export const DISH_TYPES: DishTypeInfo[] = [
   { id: 'podcast', name: '播客稿', emoji: '🍹', category: '饮品', description: '口语化、适合朗读' },
   { id: 'essay', name: '散文', emoji: '🍜', category: '汤品', description: '温润流动、情感丰沛' },
   { id: 'review', name: '影评/书评', emoji: '🧊', category: '冰品', description: '冷静理性的分析' },
-  { id: 'flash-fiction', name: '闪小说', emoji: '🥟', category: '小吃', description: '500字以内的极短叙事' },
+  { id: 'standup', name: '脱口秀稿', emoji: '🎤', category: '小吃', description: '短小精悍的口语表演稿' },
   { id: 'lyrics', name: '歌词', emoji: '🍶', category: '酒', description: '韵律感强、适合吟唱' },
 ];

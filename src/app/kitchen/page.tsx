@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   ChefHat,
   CookingPot,
@@ -9,6 +10,9 @@ import {
   ArrowRight,
   Check,
   RotateCcw,
+  ChevronDown,
+  Download,
+  BookOpen,
 } from "lucide-react";
 import { CHEFS } from "@/lib/chefs";
 import { DISH_TYPES } from "@/lib/dishes";
@@ -29,12 +33,26 @@ import type { Ingredient, Seasoning, DishType, Creation } from "@/lib/types";
    Step labels for the progress bar
    ────────────────────────────────────────────── */
 const STEP_LABELS = [
-  "选食材",
   "报菜名",
   "选菜式",
-  "选厨师",
+  "选手艺",
   "调味",
   "上菜",
+];
+
+const THEME_SUGGESTIONS = [
+  "深夜的便利店",
+  "一封没寄出的信",
+  "AI觉醒的瞬间",
+  "最后一趟末班车",
+  "童年夏天的味道",
+  "一个人的旅行",
+  "城市里的隐形人",
+  "时间旅行者的日记",
+  "外婆的厨房",
+  "雨天的咖啡馆",
+  "消失的邻居",
+  "凌晨三点的电话",
 ];
 
 /* ──────────────────────────────────────────────
@@ -136,30 +154,37 @@ function StepNav({
 function KitchenContent() {
   const searchParams = useSearchParams();
 
-  // State machine step (1-6)
+  // State machine step (1-5)
   const [step, setStep] = useState(1);
 
-  // Step 1: ingredients
+  // Step 1: dish name
+  const [dishName, setDishName] = useState("");
+
+  // Step 2: dish type
+  const [selectedDish, setSelectedDish] = useState<DishType | null>(null);
+
+  // Step 3: craft mode — "master" (名家手艺) or "custom" (自创手艺)
+  const [craftMode, setCraftMode] = useState<"master" | "custom">("master");
+
+  // Step 3 - master: chef selection
+  const [selectedChefId, setSelectedChefId] = useState<string | null>(null);
+  const [chefDropdownOpen, setChefDropdownOpen] = useState(false);
+  const chefDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Step 3 - custom: ingredient selection
   const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
   const [selectedIngredientIds, setSelectedIngredientIds] = useState<Set<string>>(new Set());
 
-  // Step 2: dish name
-  const [dishName, setDishName] = useState("");
-
-  // Step 3: dish type
-  const [selectedDish, setSelectedDish] = useState<DishType | null>(null);
-
-  // Step 4: chef (null means "厨房默认")
-  const [selectedChefId, setSelectedChefId] = useState<string | null>(null);
-
-  // Step 5: seasoning
+  // Step 4: seasoning
   const [seasoning, setSeasoning] = useState<Seasoning>({ ...DEFAULT_SEASONING });
 
-  // Step 6: cooking result
+  // Step 5: cooking result
   const [content, setContent] = useState("");
   const [isCooking, setIsCooking] = useState(false);
+  const [isExtractingStyle, setIsExtractingStyle] = useState(false);
   const [cookingError, setCookingError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [customStylePrompt, setCustomStylePrompt] = useState("");
   const resultRef = useRef<HTMLDivElement>(null);
 
   // Load ingredients on mount
@@ -181,6 +206,17 @@ function KitchenContent() {
       setSeasoning(getDefaultSeasoningForDish(selectedDish));
     }
   }, [selectedDish]);
+
+  // Close chef dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (chefDropdownRef.current && !chefDropdownRef.current.contains(e.target as Node)) {
+        setChefDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Auto-scroll while streaming
   useEffect(() => {
@@ -217,26 +253,58 @@ function KitchenContent() {
     setSeasoning((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Can proceed from Step 3?
+  const step3NextDisabled =
+    craftMode === "custom" && selectedIngredientIds.size === 0;
+
   /* ── Cooking logic ── */
   const startCooking = async () => {
     setIsCooking(true);
     setContent("");
     setCookingError("");
     setSaved(false);
+    setCustomStylePrompt("");
+
+    let stylePrompt = "";
 
     try {
+      // If custom craft mode, first extract style from ingredients
+      if (craftMode === "custom" && selectedIngredients.length > 0) {
+        setIsExtractingStyle(true);
+        const extractRes = await fetch("/api/extract-style", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ingredients: selectedIngredients.map((i) => ({
+              title: i.title,
+              content: i.content,
+            })),
+          }),
+        });
+
+        const extractData = await extractRes.json();
+        setIsExtractingStyle(false);
+
+        if (!extractRes.ok) {
+          throw new Error(extractData.error || "风格提炼失败");
+        }
+
+        stylePrompt = extractData.stylePrompt;
+        setCustomStylePrompt(stylePrompt);
+      } else {
+        stylePrompt = selectedChef?.stylePrompt || "";
+      }
+
+      // Now create the content
       const response = await fetch("/api/cook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dishName,
           dishType: selectedDish,
-          chefStylePrompt: selectedChef?.stylePrompt || "",
+          chefStylePrompt: stylePrompt,
           seasoning,
-          ingredients: selectedIngredients.map((i) => ({
-            title: i.title,
-            content: i.content,
-          })),
+          ingredients: [],
         }),
       });
 
@@ -277,6 +345,7 @@ function KitchenContent() {
       const msg = err instanceof Error ? err.message : "未知错误";
       setCookingError(`烹饪过程中出了点问题：${msg}`);
     } finally {
+      setIsExtractingStyle(false);
       setIsCooking(false);
     }
   };
@@ -287,116 +356,37 @@ function KitchenContent() {
       id: generateId(),
       dishName,
       dishType: selectedDish,
-      chefId: selectedChefId || "default",
+      chefId: craftMode === "master" ? (selectedChefId || "default") : "custom",
+      craftMode,
       seasoning,
       content,
-      ingredientIds: Array.from(selectedIngredientIds),
+      ingredientIds: craftMode === "custom" ? Array.from(selectedIngredientIds) : [],
       createdAt: Date.now(),
     };
     saveCreation(creation);
     setSaved(true);
   };
 
+  const handleDownload = () => {
+    if (!content) return;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${dishName || "作品"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   /* ──────────────────────────────────────────
      Render each step
      ────────────────────────────────────────── */
 
+  // Step 1: 报菜名
   const renderStep1 = () => (
     <div>
       <h2 className="text-2xl font-bold text-warm-800 mb-2">
-        <span className="mr-2">1.</span>选食材
-      </h2>
-      <p className="text-warm-500 mb-6">从你的食材库中选择参考素材，为创作提供灵感。</p>
-
-      {allIngredients.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-warm-400 text-lg mb-4">食材库还是空的呢...</p>
-          <p className="text-warm-300 text-sm mb-6">
-            没关系，你可以直接进入创作，也可以先去食材库添加一些素材。
-          </p>
-        </div>
-      ) : (
-        <>
-          <button
-            onClick={toggleSelectAll}
-            className="mb-4 px-4 py-2 rounded-lg border border-warm-200 text-warm-600 hover:bg-warm-50 text-sm transition-colors"
-          >
-            {selectedIngredientIds.size === allIngredients.length
-              ? "取消全选"
-              : "全选"}
-          </button>
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {allIngredients.map((ing) => {
-              const checked = selectedIngredientIds.has(ing.id);
-              return (
-                <label
-                  key={ing.id}
-                  className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    checked
-                      ? "border-toast bg-warm-50 shadow-sm"
-                      : "border-warm-100 hover:border-warm-200"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleIngredient(ing.id)}
-                    className="mt-1 accent-toast w-4 h-4"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-warm-800 truncate">
-                      {ing.title}
-                    </h3>
-                    <p className="text-sm text-warm-500 line-clamp-2 mt-1">
-                      {ing.content}
-                    </p>
-                    {ing.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {ing.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 text-xs rounded-full bg-warm-100 text-warm-600"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      <div className="flex items-center justify-between mt-8">
-        <div />
-        <div className="flex items-center gap-3">
-          {allIngredients.length > 0 && selectedIngredientIds.size === 0 && (
-            <button
-              onClick={() => setStep(2)}
-              className="px-4 py-2 rounded-lg text-warm-400 hover:text-warm-600 hover:bg-warm-50 text-sm transition-colors"
-            >
-              不选食材，直接创作
-            </button>
-          )}
-          <button
-            onClick={() => setStep(2)}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-toast text-white font-semibold hover:bg-warm-500 transition-all shadow-md hover:shadow-lg"
-          >
-            <span>下一步</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div>
-      <h2 className="text-2xl font-bold text-warm-800 mb-2">
-        <span className="mr-2">2.</span>报菜名
+        <span className="mr-2">1.</span>报菜名
       </h2>
       <p className="text-warm-500 mb-6">给你的作品起一个主题或方向。</p>
 
@@ -409,21 +399,45 @@ function KitchenContent() {
           className="w-full text-xl px-6 py-5 rounded-2xl border-2 border-warm-200 focus:border-toast focus:outline-none bg-white text-warm-800 placeholder:text-warm-300 transition-colors"
           autoFocus
         />
+        <div className="mt-4">
+          <p className="text-xs text-warm-400 mb-2">找找灵感</p>
+          <div className="flex flex-wrap gap-2">
+            {THEME_SUGGESTIONS.map((theme) => (
+              <button
+                key={theme}
+                type="button"
+                onClick={() => setDishName(theme)}
+                className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+                  dishName === theme
+                    ? "border-toast bg-toast/10 text-toast font-medium"
+                    : "border-warm-200 text-warm-500 hover:border-warm-300 hover:text-warm-700 bg-white"
+                }`}
+              >
+                {theme}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <StepNav
-        step={step}
-        onBack={() => setStep(1)}
-        onNext={() => setStep(3)}
-        nextDisabled={!dishName.trim()}
-      />
+      <div className="flex items-center justify-end mt-8">
+        <button
+          onClick={() => setStep(2)}
+          disabled={!dishName.trim()}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-toast text-white font-semibold hover:bg-warm-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+        >
+          <span>下一步</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 
-  const renderStep3 = () => (
+  // Step 2: 选菜式
+  const renderStep2 = () => (
     <div>
       <h2 className="text-2xl font-bold text-warm-800 mb-2">
-        <span className="mr-2">3.</span>选菜式
+        <span className="mr-2">2.</span>选菜式
       </h2>
       <p className="text-warm-500 mb-6">选择作品的体裁。</p>
 
@@ -453,112 +467,237 @@ function KitchenContent() {
 
       <StepNav
         step={step}
-        onBack={() => setStep(2)}
-        onNext={() => setStep(4)}
+        onBack={() => setStep(1)}
+        onNext={() => setStep(3)}
         nextDisabled={!selectedDish}
       />
     </div>
   );
 
-  const renderStep4 = () => {
+  // Step 3: 选手艺 (名家手艺 / 自创手艺)
+  const renderStep3 = () => {
     const recommendedChefs = CHEFS.filter((c) => c.bestDishes.includes(selectedDish!));
     const otherChefs = CHEFS.filter((c) => !c.bestDishes.includes(selectedDish!));
-
-    const renderChefButton = (chef: typeof CHEFS[number], isRecommended: boolean) => {
-      const isSelected = selectedChefId === chef.id;
-      return (
-        <button
-          key={chef.id}
-          onClick={() => setSelectedChefId(chef.id)}
-          className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-            isSelected
-              ? "border-toast bg-warm-50 shadow-md"
-              : isRecommended
-              ? "border-warm-100 hover:border-warm-200 bg-white"
-              : "border-warm-100 hover:border-warm-200 bg-white opacity-60"
-          }`}
-        >
-          <span className="text-3xl">{chef.emoji}</span>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-warm-800">{chef.name}</h3>
-              {isRecommended && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 font-medium">
-                  擅长此菜
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {chef.styleTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs rounded-full bg-warm-100 text-warm-600"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <p className="text-sm text-warm-400 mt-2 line-clamp-2">
-              {chef.description}
-            </p>
-          </div>
-        </button>
-      );
-    };
+    const displayChef = selectedChefId === null
+      ? { emoji: "🍳", name: "厨房默认", styleTags: [] as string[], description: "不指定特定风格，让AI自由发挥" }
+      : CHEFS.find((c) => c.id === selectedChefId)!;
 
     return (
       <div>
         <h2 className="text-2xl font-bold text-warm-800 mb-2">
-          <span className="mr-2">4.</span>选厨师
+          <span className="mr-2">3.</span>选手艺
         </h2>
-        <p className="text-warm-500 mb-6">选一位风格厨师来创作你的作品。</p>
+        <p className="text-warm-500 mb-6">选择创作的风格来源。</p>
 
-        <div className="space-y-3">
-          {/* Default chef option */}
+        {/* Tab switcher */}
+        <div className="flex rounded-xl border-2 border-warm-200 overflow-hidden mb-6">
           <button
-            onClick={() => setSelectedChefId(null)}
-            className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
-              selectedChefId === null
-                ? "border-toast bg-warm-50 shadow-md"
-                : "border-warm-100 hover:border-warm-200 bg-white"
+            onClick={() => setCraftMode("master")}
+            className={`flex-1 py-3 text-center font-semibold transition-all ${
+              craftMode === "master"
+                ? "bg-toast text-white"
+                : "bg-white text-warm-500 hover:bg-warm-50"
             }`}
           >
-            <span className="text-3xl">🍳</span>
-            <div className="flex-1">
-              <h3 className="font-semibold text-warm-800">厨房默认</h3>
-              <p className="text-sm text-warm-400 mt-1">
-                不指定特定风格，让AI自由发挥
-              </p>
-            </div>
+            🧑‍🍳 名家手艺
           </button>
-
-          {/* Recommended chefs */}
-          {recommendedChefs.length > 0 && (
-            <>
-              <p className="text-xs text-warm-400 font-medium pt-2">推荐厨师</p>
-              {recommendedChefs.map((chef) => renderChefButton(chef, true))}
-            </>
-          )}
-
-          {/* Other chefs */}
-          {otherChefs.length > 0 && (
-            <>
-              <p className="text-xs text-warm-400 font-medium pt-2">其他厨师</p>
-              {otherChefs.map((chef) => renderChefButton(chef, false))}
-            </>
-          )}
+          <button
+            onClick={() => setCraftMode("custom")}
+            className={`flex-1 py-3 text-center font-semibold transition-all ${
+              craftMode === "custom"
+                ? "bg-toast text-white"
+                : "bg-white text-warm-500 hover:bg-warm-50"
+            }`}
+          >
+            🧪 自创手艺
+          </button>
         </div>
+
+        {/* Master craft: chef selection */}
+        {craftMode === "master" && (
+          <>
+            {/* Dropdown container */}
+            <div ref={chefDropdownRef} className="relative">
+              <button
+                onClick={() => setChefDropdownOpen(!chefDropdownOpen)}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 bg-white text-left hover:border-warm-300 transition-all"
+              >
+                <span className="text-2xl">{displayChef.emoji}</span>
+                <span className="flex-1 font-semibold text-warm-800">{displayChef.name}</span>
+                <ChevronDown className={`w-5 h-5 text-warm-400 transition-transform ${chefDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {chefDropdownOpen && (
+                <div className="absolute z-20 left-0 right-0 mt-2 bg-white rounded-xl border border-warm-200 shadow-lg max-h-80 overflow-y-auto">
+                  <button
+                    onClick={() => { setSelectedChefId(null); setChefDropdownOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-warm-50 transition-colors ${
+                      selectedChefId === null ? "bg-warm-50" : ""
+                    }`}
+                  >
+                    <span className="text-xl">🍳</span>
+                    <span className="font-medium text-warm-800">厨房默认</span>
+                  </button>
+
+                  {recommendedChefs.length > 0 && (
+                    <>
+                      <div className="px-4 py-1.5 text-xs text-warm-400 font-medium bg-warm-50 border-y border-warm-100">
+                        推荐手艺
+                      </div>
+                      {recommendedChefs.map((chef) => (
+                        <button
+                          key={chef.id}
+                          onClick={() => { setSelectedChefId(chef.id); setChefDropdownOpen(false); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-warm-50 transition-colors ${
+                            selectedChefId === chef.id ? "bg-warm-50" : ""
+                          }`}
+                        >
+                          <span className="text-xl">{chef.emoji}</span>
+                          <span className="font-medium text-warm-800">{chef.name}</span>
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">擅长</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {otherChefs.length > 0 && (
+                    <>
+                      <div className="px-4 py-1.5 text-xs text-warm-400 font-medium bg-warm-50 border-y border-warm-100">
+                        其他手艺
+                      </div>
+                      {otherChefs.map((chef) => (
+                        <button
+                          key={chef.id}
+                          onClick={() => { setSelectedChefId(chef.id); setChefDropdownOpen(false); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-warm-50 transition-colors ${
+                            selectedChefId === chef.id ? "bg-warm-50" : ""
+                          }`}
+                        >
+                          <span className="text-xl">{chef.emoji}</span>
+                          <span className="font-medium text-warm-700">{chef.name}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Selected chef detail card */}
+            <div className="mt-4 p-5 rounded-xl border border-warm-100 bg-warm-50">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl">{displayChef.emoji}</span>
+                <h3 className="text-lg font-semibold text-warm-800">{displayChef.name}</h3>
+              </div>
+              {displayChef.styleTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {displayChef.styleTags.map((tag) => (
+                    <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-warm-100 text-warm-600">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="text-sm text-warm-500 leading-relaxed">{displayChef.description}</p>
+            </div>
+          </>
+        )}
+
+        {/* Custom craft: ingredient selection */}
+        {craftMode === "custom" && (
+          <>
+            <p className="text-warm-500 text-sm mb-4">
+              选择素材，AI 会先从中提炼写作风格，再用这个风格来创作。
+            </p>
+
+            {allIngredients.length === 0 ? (
+              <div className="text-center py-12 bg-warm-50 rounded-xl border border-warm-100">
+                <BookOpen className="w-10 h-10 mx-auto mb-3 text-warm-300" />
+                <p className="text-warm-400 text-lg mb-2">素材库还是空的</p>
+                <p className="text-warm-300 text-sm mb-4">
+                  先去素材库添加一些你喜欢的文字片段吧。
+                </p>
+                <Link
+                  href="/pantry"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-toast text-white rounded-lg font-semibold hover:bg-warm-500 transition-colors text-sm"
+                >
+                  去素材库
+                </Link>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={toggleSelectAll}
+                  className="mb-4 px-4 py-2 rounded-lg border border-warm-200 text-warm-600 hover:bg-warm-50 text-sm transition-colors"
+                >
+                  {selectedIngredientIds.size === allIngredients.length
+                    ? "取消全选"
+                    : "全选"}
+                </button>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {allIngredients.map((ing) => {
+                    const checked = selectedIngredientIds.has(ing.id);
+                    return (
+                      <label
+                        key={ing.id}
+                        className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          checked
+                            ? "border-toast bg-warm-50 shadow-sm"
+                            : "border-warm-100 hover:border-warm-200"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleIngredient(ing.id)}
+                          className="mt-1 accent-toast w-4 h-4"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-warm-800 truncate">
+                            {ing.title}
+                          </h3>
+                          <p className="text-sm text-warm-500 line-clamp-2 mt-1">
+                            {ing.content}
+                          </p>
+                          {ing.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {ing.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 text-xs rounded-full bg-warm-100 text-warm-600"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedIngredientIds.size > 0 && (
+                  <p className="text-xs text-warm-400 mt-3">
+                    已选 {selectedIngredientIds.size} 份素材
+                  </p>
+                )}
+              </>
+            )}
+          </>
+        )}
 
         <StepNav
           step={step}
-          onBack={() => setStep(3)}
-          onNext={() => setStep(5)}
+          onBack={() => setStep(2)}
+          onNext={() => setStep(4)}
+          nextDisabled={step3NextDisabled}
         />
       </div>
     );
   };
 
-  const renderStep5 = () => {
+  // Step 4: 调味
+  const renderStep4 = () => {
     const config = getDishConfig(selectedDish!);
 
     const renderOptionGroup = <T extends string>(
@@ -602,7 +741,7 @@ function KitchenContent() {
     return (
       <div>
         <h2 className="text-2xl font-bold text-warm-800 mb-2">
-          <span className="mr-2">5.</span>调味
+          <span className="mr-2">4.</span>调味
         </h2>
         <p className="text-warm-500 mb-6">微调创作参数，让作品更合你口味。</p>
 
@@ -626,7 +765,7 @@ function KitchenContent() {
 
         <div className="flex items-center justify-between mt-8">
           <button
-            onClick={() => setStep(4)}
+            onClick={() => setStep(3)}
             className="flex items-center gap-1 px-4 py-2 rounded-lg text-warm-600 hover:bg-warm-100 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -634,8 +773,7 @@ function KitchenContent() {
           </button>
           <button
             onClick={() => {
-              setStep(6);
-              // Defer cooking to next tick so UI renders first
+              setStep(5);
               setTimeout(startCooking, 100);
             }}
             className="flex items-center gap-2 px-8 py-4 rounded-xl bg-toast text-white font-bold text-lg hover:bg-warm-500 transition-all shadow-lg hover:shadow-xl"
@@ -648,10 +786,11 @@ function KitchenContent() {
     );
   };
 
-  const renderStep6 = () => (
+  // Step 5: 上菜
+  const renderStep5 = () => (
     <div>
       {/* Cooking animation / header */}
-      {isCooking && (
+      {(isCooking || isExtractingStyle) && (
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-warm-100 text-warm-700">
             <div className="flex gap-1">
@@ -659,7 +798,9 @@ function KitchenContent() {
               <span className="w-2 h-2 rounded-full bg-toast animate-bounce" style={{ animationDelay: "150ms" }} />
               <span className="w-2 h-2 rounded-full bg-toast animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
-            <span className="font-semibold">正在烹饪中...</span>
+            <span className="font-semibold">
+              {isExtractingStyle ? "正在研究素材风格..." : "正在烹饪中..."}
+            </span>
             <div className="flex gap-1">
               <span className="w-2 h-2 rounded-full bg-toast animate-bounce" style={{ animationDelay: "450ms" }} />
               <span className="w-2 h-2 rounded-full bg-toast animate-bounce" style={{ animationDelay: "600ms" }} />
@@ -669,7 +810,7 @@ function KitchenContent() {
         </div>
       )}
 
-      {!isCooking && content && !cookingError && (
+      {!isCooking && !isExtractingStyle && content && !cookingError && (
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-green-50 text-green-700">
             <Check className="w-4 h-4" />
@@ -687,7 +828,9 @@ function KitchenContent() {
           </span>
         )}
         <span className="px-3 py-1 rounded-full bg-warm-100 text-warm-700">
-          {selectedChef ? `${selectedChef.emoji} ${selectedChef.name}` : "🍳 厨房默认"}
+          {craftMode === "master"
+            ? (selectedChef ? `${selectedChef.emoji} ${selectedChef.name}` : "🍳 厨房默认")
+            : `🧪 自创手艺 · ${selectedIngredientIds.size}份素材`}
         </span>
         <span className="px-3 py-1 rounded-full bg-warm-100 text-warm-700">
           「{dishName}」
@@ -714,7 +857,7 @@ function KitchenContent() {
       )}
 
       {/* Action buttons (shown when cooking is done) */}
-      {!isCooking && content && (
+      {!isCooking && !isExtractingStyle && content && (
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
           <button
             onClick={handleSave}
@@ -730,12 +873,20 @@ function KitchenContent() {
           </button>
 
           <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-semibold hover:bg-warm-50 transition-all"
+          >
+            <Download className="w-4 h-4" />
+            <span>下载 .txt</span>
+          </button>
+
+          <button
             onClick={() => {
               setContent("");
               setCookingError("");
               setSaved(false);
               setDishName("");
-              setStep(2);
+              setStep(1);
             }}
             className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-semibold hover:bg-warm-50 transition-all"
           >
@@ -748,22 +899,22 @@ function KitchenContent() {
               setContent("");
               setCookingError("");
               setSaved(false);
-              setStep(4);
+              setStep(3);
             }}
             className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-warm-200 text-warm-600 font-semibold hover:bg-warm-50 transition-all"
           >
             <ChefHat className="w-4 h-4" />
-            <span>换个做法</span>
+            <span>换个手艺</span>
           </button>
         </div>
       )}
 
       {/* Retry on error */}
-      {!isCooking && cookingError && !content && (
+      {!isCooking && !isExtractingStyle && cookingError && !content && (
         <div className="flex justify-center mt-6">
           <button
             onClick={() => {
-              setStep(6);
+              setStep(5);
               setTimeout(startCooking, 100);
             }}
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-toast text-white font-semibold hover:bg-warm-500 transition-all shadow-md"
@@ -789,8 +940,6 @@ function KitchenContent() {
         return renderStep4();
       case 5:
         return renderStep5();
-      case 6:
-        return renderStep6();
       default:
         return null;
     }

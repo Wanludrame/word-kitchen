@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, BookOpen } from "lucide-react";
+import { Plus, Trash2, BookOpen, Globe, Loader2 } from "lucide-react";
 import { getIngredients, addIngredient, removeIngredient, generateId } from "@/lib/storage";
 import { Ingredient } from "@/lib/types";
 
@@ -11,6 +11,9 @@ export default function PantryPage() {
   const [content, setContent] = useState("");
   const [source, setSource] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
     setIngredients(getIngredients());
@@ -47,6 +50,36 @@ export default function PantryPage() {
     setIngredients(updated);
   }
 
+  async function handleFetchUrl() {
+    if (!urlInput.trim()) return;
+    setIsFetching(true);
+    setFetchError("");
+
+    try {
+      const response = await fetch("/api/fetch-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "抓取失败");
+      }
+
+      setTitle(data.title || "");
+      setContent(data.content || "");
+      setSource(data.source || urlInput.trim());
+      setUrlInput("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "未知错误";
+      setFetchError(msg);
+    } finally {
+      setIsFetching(false);
+    }
+  }
+
   function formatDate(ts: number) {
     return new Date(ts).toLocaleDateString("zh-CN", {
       year: "numeric",
@@ -66,6 +99,42 @@ export default function PantryPage() {
         <span className="ml-auto text-sm text-warm-500">
           共 <span className="font-semibold text-warm-700">{ingredients.length}</span> 份食材
         </span>
+      </div>
+
+      {/* URL import section */}
+      <div className="bg-white rounded-xl border border-warm-200 p-6 mb-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Globe className="w-4 h-4 text-toast" />
+          <h3 className="text-sm font-semibold text-warm-700">从网址导入</h3>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => { setUrlInput(e.target.value); setFetchError(""); }}
+            placeholder="粘贴文章网址..."
+            className="flex-1 px-4 py-2.5 rounded-lg border border-warm-200 bg-warm-50 text-warm-800 placeholder:text-warm-300 focus:outline-none focus:ring-2 focus:ring-toast/40 focus:border-toast transition-colors text-sm"
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleFetchUrl(); } }}
+          />
+          <button
+            type="button"
+            onClick={handleFetchUrl}
+            disabled={!urlInput.trim() || isFetching}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-toast text-white text-sm font-semibold hover:bg-warm-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {isFetching ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <span>抓取</span>
+            )}
+          </button>
+        </div>
+        {fetchError && (
+          <p className="text-red-500 text-xs mt-2">{fetchError}</p>
+        )}
+        {isFetching && (
+          <p className="text-warm-400 text-xs mt-2">正在抓取网页内容...</p>
+        )}
       </div>
 
       {/* Add ingredient form */}

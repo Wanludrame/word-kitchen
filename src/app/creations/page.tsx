@@ -58,6 +58,19 @@ export default function CreationsPage() {
     return DISH_TYPES.find((d) => d.id === dishTypeId);
   }
 
+  // Backward compatibility for renamed dish types
+  const LEGACY_DISHES: Record<string, { emoji: string; name: string }> = {
+    "flash-fiction": { emoji: "🥟", name: "闪小说" },
+  };
+
+  function getDishDisplay(dishTypeId: string) {
+    const dish = getDishType(dishTypeId);
+    if (dish) return { emoji: dish.emoji, name: dish.name };
+    const legacy = LEGACY_DISHES[dishTypeId];
+    if (legacy) return legacy;
+    return { emoji: "🍽️", name: dishTypeId };
+  }
+
   function getChefName(chefId: string) {
     if (chefId === "default") return "厨房默认";
     const chef = CHEFS.find((c) => c.id === chefId);
@@ -98,7 +111,7 @@ export default function CreationsPage() {
       {/* Creation list */}
       <div className="space-y-4">
         {creations.map((creation) => {
-          const dish = getDishType(creation.dishType);
+          const dishDisplay = getDishDisplay(creation.dishType);
           const isExpanded = expandedId === creation.id;
           const isDeleting = deletingId === creation.id;
           const isCopied = copiedId === creation.id;
@@ -117,14 +130,14 @@ export default function CreationsPage() {
               >
                 {/* Dish type emoji */}
                 <span className="text-2xl mt-0.5 shrink-0">
-                  {dish?.emoji ?? "🍽️"}
+                  {dishDisplay.emoji}
                 </span>
 
                 {/* Card body */}
                 <div className="flex-1 min-w-0">
                   {/* Dish type label */}
                   <span className="text-xs font-medium text-toast bg-warm-100 px-2 py-0.5 rounded-full">
-                    {dish?.name ?? creation.dishType}
+                    {dishDisplay.name}
                   </span>
 
                   {/* Dish name (title) */}

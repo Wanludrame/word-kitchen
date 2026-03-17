@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChefHat, Warehouse, CookingPot, Sparkles } from "lucide-react";
+import { ChefHat, Warehouse, CookingPot, Sparkles, Palette } from "lucide-react";
 import { CHEFS } from "@/lib/chefs";
 import { DISH_TYPES } from "@/lib/dishes";
 
@@ -18,24 +18,24 @@ const staggerContainer = {
 
 const steps = [
   {
-    icon: Warehouse,
-    title: "添加食材",
-    desc: "把你读过的文字片段存入食材库",
-  },
-  {
     icon: CookingPot,
     title: "报菜名",
-    desc: "选择你想烹饪的文体类型",
+    desc: "给你的作品起个主题",
+  },
+  {
+    icon: Palette,
+    title: "选菜式",
+    desc: "选择你想要的文体类型",
   },
   {
     icon: ChefHat,
-    title: "选厨师",
-    desc: "挑一位风格独特的文字大厨",
+    title: "选手艺",
+    desc: "名家风格或自创素材，二选一",
   },
   {
     icon: Sparkles,
     title: "上菜",
-    desc: "AI 融合食材与风格，端出佳作",
+    desc: "AI 融合风格与灵感，端出佳作",
   },
 ];
 
@@ -177,7 +177,7 @@ export default function Home() {
           className="text-center text-warm-500 mb-12"
           variants={fadeInUp}
         >
-          十位风格迥异的文字大厨，等你挑选
+          十三位风格迥异的文字大厨，等你挑选
         </motion.p>
         <div className="flex gap-4 overflow-x-auto pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-x-visible">
           {CHEFS.map((chef) => (

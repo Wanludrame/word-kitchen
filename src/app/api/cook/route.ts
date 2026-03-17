@@ -1,12 +1,18 @@
 import { AzureOpenAI } from "openai";
 import { NextRequest } from "next/server";
 
-const client = new AzureOpenAI({
-  apiKey: process.env.AZURE_OPENAI_API_KEY,
-  endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-  apiVersion: "2024-12-01-preview",
-  deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
-});
+let _client: AzureOpenAI | null = null;
+function getClient() {
+  if (!_client) {
+    _client = new AzureOpenAI({
+      apiKey: process.env.AZURE_OPENAI_API_KEY,
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+      apiVersion: "2024-12-01-preview",
+      deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
+    });
+  }
+  return _client;
+}
 
 // Maps for building the prompt in Chinese
 const PORTION_MAP: Record<string, string> = {
@@ -54,7 +60,7 @@ const DISH_TYPE_MAP: Record<string, string> = {
   podcast: "播客口播稿",
   essay: "散文",
   review: "评论文章",
-  "flash-fiction": "500字以内的闪小说",
+  "standup": "脱口秀独白稿，口语化、节奏感强、有梗有包袱",
   lyrics: "歌词",
 };
 
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
     const userMessage = userParts.join("\n");
 
     // Use streaming with Azure OpenAI
-    const stream = await client.chat.completions.create({
+    const stream = await getClient().chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT || "",
       max_completion_tokens: 8192,
       stream: true,
