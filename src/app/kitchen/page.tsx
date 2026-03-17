@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Download,
   BookOpen,
+  Shuffle,
 } from "lucide-react";
 import { CHEFS } from "@/lib/chefs";
 import { DISH_TYPES } from "@/lib/dishes";
@@ -40,7 +41,7 @@ const STEP_LABELS = [
   "上菜",
 ];
 
-const THEME_SUGGESTIONS = [
+const THEME_POOL = [
   "深夜的便利店",
   "一封没寄出的信",
   "AI觉醒的瞬间",
@@ -53,7 +54,36 @@ const THEME_SUGGESTIONS = [
   "雨天的咖啡馆",
   "消失的邻居",
   "凌晨三点的电话",
+  "被遗忘的图书馆",
+  "平行宇宙的自己",
+  "老照片背后的故事",
+  "一只迷路的猫",
+  "世界末日前一天",
+  "毕业那天的雨",
+  "楼顶上的天台",
+  "地铁里的陌生人",
+  "冰箱里最后一颗鸡蛋",
+  "月球上的孤独",
+  "奶奶的缝纫机",
+  "写给十年后的自己",
+  "误入的平行世界",
+  "深海里的城市",
+  "失眠者的独白",
+  "一场没有观众的演出",
+  "废弃游乐场",
+  "穿越到古代的手机",
+  "消失的第十三层",
+  "梦里的陌生城市",
+  "最后一家书店",
+  "机器人的眼泪",
+  "春天最后一场雪",
+  "弄堂里的烟火气",
 ];
+
+function pickRandomThemes(pool: string[], count: number): string[] {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 /* ──────────────────────────────────────────────
    Progress bar component
@@ -159,6 +189,7 @@ function KitchenContent() {
 
   // Step 1: dish name
   const [dishName, setDishName] = useState("");
+  const [displayedThemes, setDisplayedThemes] = useState(() => pickRandomThemes(THEME_POOL, 8));
 
   // Step 2: dish type
   const [selectedDish, setSelectedDish] = useState<DishType | null>(null);
@@ -400,9 +431,19 @@ function KitchenContent() {
           autoFocus
         />
         <div className="mt-4">
-          <p className="text-xs text-warm-400 mb-2">找找灵感</p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-xs text-warm-400">找找灵感</p>
+            <button
+              type="button"
+              onClick={() => setDisplayedThemes(pickRandomThemes(THEME_POOL, 8))}
+              className="text-xs text-warm-400 hover:text-toast transition-colors flex items-center gap-1"
+            >
+              <Shuffle className="w-3 h-3" />
+              换一批
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {THEME_SUGGESTIONS.map((theme) => (
+            {displayedThemes.map((theme) => (
               <button
                 key={theme}
                 type="button"
@@ -814,7 +855,7 @@ function KitchenContent() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-green-50 text-green-700">
             <Check className="w-4 h-4" />
-            <span className="font-semibold">烹饪完成！</span>
+            <span className="font-semibold">烹饪完成！共 {content.replace(/\s/g, "").length} 字</span>
           </div>
         </div>
       )}
