@@ -144,10 +144,12 @@ export async function POST(request: NextRequest) {
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
-        } catch (err) {
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "生成过程中出错了";
+          console.error("Stream error:", msg);
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ error: "生成过程中出错了" })}\n\n`
+              `data: ${JSON.stringify({ error: msg })}\n\n`
             )
           );
           controller.close();
@@ -162,7 +164,9 @@ export async function POST(request: NextRequest) {
         Connection: "keep-alive",
       },
     });
-  } catch (error) {
-    return Response.json({ error: "请求处理失败" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "未知错误";
+    console.error("Cook API error:", message);
+    return Response.json({ error: `请求处理失败: ${message}` }, { status: 500 });
   }
 }

@@ -241,7 +241,8 @@ function KitchenContent() {
       });
 
       if (!response.ok) {
-        throw new Error("请求失败");
+        const errBody = await response.json().catch(() => null);
+        throw new Error(errBody?.error || `请求失败 (${response.status})`);
       }
 
       const reader = response.body!.getReader();
@@ -272,8 +273,9 @@ function KitchenContent() {
           }
         }
       }
-    } catch (err) {
-      setCookingError("烹饪过程中出了点问题，请稍后再试。");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "未知错误";
+      setCookingError(`烹饪过程中出了点问题：${msg}`);
     } finally {
       setIsCooking(false);
     }
