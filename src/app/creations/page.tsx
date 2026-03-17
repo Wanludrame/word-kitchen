@@ -54,6 +54,16 @@ export default function CreationsPage() {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  function handleDownload(creation: Creation) {
+    const blob = new Blob([creation.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${creation.dishName}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function getDishType(dishTypeId: string) {
     return DISH_TYPES.find((d) => d.id === dishTypeId);
   }
@@ -121,20 +131,20 @@ export default function CreationsPage() {
               key={creation.id}
               className="bg-white rounded-xl border border-warm-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
-              {/* Card header - clickable */}
-              <button
-                onClick={() =>
-                  setExpandedId(isExpanded ? null : creation.id)
-                }
-                className="w-full text-left px-5 py-4 flex items-start gap-4 cursor-pointer"
-              >
+              {/* Card header */}
+              <div className="px-5 py-4 flex items-start gap-4">
                 {/* Dish type emoji */}
                 <span className="text-2xl mt-0.5 shrink-0">
                   {dishDisplay.emoji}
                 </span>
 
-                {/* Card body */}
-                <div className="flex-1 min-w-0">
+                {/* Card body - clickable to expand */}
+                <button
+                  onClick={() =>
+                    setExpandedId(isExpanded ? null : creation.id)
+                  }
+                  className="flex-1 min-w-0 text-left cursor-pointer"
+                >
                   {/* Dish type label */}
                   <span className="text-xs font-medium text-toast bg-warm-100 px-2 py-0.5 rounded-full">
                     {dishDisplay.name}
@@ -159,17 +169,43 @@ export default function CreationsPage() {
                         : creation.content}
                     </p>
                   )}
-                </div>
+                </button>
 
-                {/* Expand icon */}
-                <span className="text-warm-400 mt-1 shrink-0">
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5" />
-                  )}
-                </span>
-              </button>
+                {/* Action buttons - always visible */}
+                <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                  <button
+                    onClick={() => handleCopy(creation.id, creation.content)}
+                    className="p-1.5 rounded-lg transition-colors text-warm-400 hover:text-warm-700 hover:bg-warm-100"
+                    title="复制"
+                  >
+                    {isCopied ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload(creation)}
+                    className="p-1.5 rounded-lg transition-colors text-warm-400 hover:text-warm-700 hover:bg-warm-100"
+                    title="下载"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() =>
+                      setExpandedId(isExpanded ? null : creation.id)
+                    }
+                    className="p-1.5 rounded-lg transition-colors text-warm-400 hover:text-warm-700 hover:bg-warm-100"
+                    title={isExpanded ? "收起" : "展开"}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
               {/* Expanded content */}
               {isExpanded && (
@@ -182,42 +218,7 @@ export default function CreationsPage() {
                   </div>
 
                   {/* Actions bar */}
-                  <div className="px-5 py-3 bg-warm-50 border-t border-warm-100 flex items-center justify-between">
-                    {/* Copy & Download buttons */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleCopy(creation.id, creation.content)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-warm-600 hover:text-warm-800 hover:bg-warm-100"
-                      >
-                        {isCopied ? (
-                          <>
-                            <Check className="w-4 h-4 text-green-600" />
-                            <span className="text-green-600">已复制</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span>复制</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const blob = new Blob([creation.content], { type: "text/plain;charset=utf-8" });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${creation.dishName}.txt`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-warm-600 hover:text-warm-800 hover:bg-warm-100"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>下载</span>
-                      </button>
-                    </div>
-
+                  <div className="px-5 py-3 bg-warm-50 border-t border-warm-100 flex items-center justify-end">
                     {/* Delete button */}
                     {isDeleting ? (
                       <div className="flex items-center gap-2">
