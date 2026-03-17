@@ -1,7 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { AzureOpenAI } from "openai";
 import { NextRequest } from "next/server";
 
-const anthropic = new Anthropic();
+const client = new AzureOpenAI({
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+  apiVersion: "2024-12-01-preview",
+  deployment: process.env.AZURE_OPENAI_DEPLOYMENT,
+});
 
 // Maps for building the prompt in Chinese
 const PORTION_MAP: Record<string, string> = {
@@ -113,12 +118,15 @@ export async function POST(request: NextRequest) {
 
     const userMessage = userParts.join("\n");
 
-    // Use streaming
-    const stream = anthropic.messages.stream({
-      model: "claude-sonnet-4-6-20250514",
+    // Use streaming with Azure OpenAI
+    const stream = await client.chat.completions.create({
+      model: process.env.AZURE_OPENAI_DEPLOYMENT || "",
       max_tokens: 8192,
-      system,
-      messages: [{ role: "user", content: userMessage }],
+      stream: true,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userMessage },
+      ],
     });
 
     // Return a streaming response
@@ -126,13 +134,11 @@ export async function POST(request: NextRequest) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content;
+            if (delta) {
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                encoder.encode(`data: ${JSON.stringify({ text: delta })}\n\n`)
               );
             }
           }

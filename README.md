@@ -15,7 +15,7 @@
 
 - Next.js 15 / React 19
 - Tailwind CSS
-- Claude API（流式输出）
+- Azure OpenAI（流式输出）
 - Framer Motion
 
 ## 本地开发
@@ -23,7 +23,7 @@
 ```bash
 npm install
 cp .env.local.example .env.local
-# 编辑 .env.local，填入你的 ANTHROPIC_API_KEY
+# 编辑 .env.local，填入 Azure OpenAI 的 API Key、Endpoint、Deployment
 npm run dev
 ```
 
